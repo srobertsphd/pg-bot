@@ -5,7 +5,7 @@ GOOGLE_MANUAL_URL = 'https://docs.google.com/spreadsheets/d/1FLLdDB9zvTgtwBSy1qW
 
 # API Keys
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-WEAVIATE_API_KEY = os.getenv('WEAVIATE_API_KEY')
+WEAVIATE_API_KEY = os.getenv('WEAVIATE_SANDBOX_API_KEY')
 
 # Weaviate Configuration
 WEAVIATE_URL = "https://manuals-roeiv8hv.weaviate.network"
