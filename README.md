@@ -7,37 +7,34 @@ A Retrieval Augmented Generation chatbot app that you can customize with your ow
 * Render (App hosting)
 * PDF Plumber (text extraction)
 
-##  1. <a name='TableofContents'></a>Table of Contents
+## Table of Contents
 
-<!-- vscode-markdown-toc -->
-* 1. [Table of Contents](#TableofContents)
-* 2. [See the Rag-bot in action](#SeetheRag-botinaction)
-* 3. [Downloading the code](#Downloadingthecode)
-* 4. [Create a virtual environment](#Createavirtualenvironment)
-* 5. [OpenAI Key](#OpenAIKey)
-* 6. [Initilalizing a Weaviate Cloud database](#InitilalizingaWeaviateClouddatabase)
-* 7. [Customize the config.py file](#Customizetheconfig.pyfile)
-* 8. [Get sample data from .parquet file](#Getsampledatafrom.parquetfile)
-* 9. [Creating a Weaviate Client and Class](#CreatingaWeaviateClientandClass)
-* 10. [Create Tenants](#CreateTenants)
-* 11. [Upload data to Weaviate](#UploaddatatoWeaviate)
-* 12. [Query Weaviate](#QueryWeaviate)
-* 13. [Now you have done the following:](#Nowyouhavedonethefollowing:)
-* 14. [Running Streamlit](#RunningStreamlit)
-* 15. [How to use your own data](#Howtouseyourowndata)
+- [RAG-bot](#rag-bot)
+  - [Table of Contents](#table-of-contents)
+  - [See the Rag-bot in action](#see-the-rag-bot-in-action)
+  - [Downloading the code](#downloading-the-code)
+  - [Create a virtual environment](#create-a-virtual-environment)
+  - [OpenAI Key](#openai-key)
+  - [Initilalizing a Weaviate Cloud database](#initilalizing-a-weaviate-cloud-database)
+  - [Customize the config.py file](#customize-the-configpy-file)
+  - [Get sample data from .parquet file](#get-sample-data-from-parquet-file)
+  - [Creating a Weaviate Client and Class](#creating-a-weaviate-client-and-class)
+  - [Create Tenants](#create-tenants)
+  - [Upload data to Weaviate](#upload-data-to-weaviate)
+  - [Query Weaviate](#query-weaviate)
+  - [Now you have done the following](#now-you-have-done-the-following)
+  - [Running Streamlit](#running-streamlit)
+  - [How to use your own data](#how-to-use-your-own-data)
+  - [Acknowledgements](#acknowledgements)
 
-<!-- vscode-markdown-toc-config
-	numbering=true
-	autoSave=true
-	/vscode-markdown-toc-config -->
-<!-- /vscode-markdown-toc -->
 
-##  2. <a name='SeetheRag-botinaction'></a>See the Rag-bot in action
+
+## See the Rag-bot in action
 
 ![Streamlit_dashboard_demo](https://github.com/srobertsphd/RAG-bot/assets/69703058/728b16dc-c8ed-42df-8605-e1df0aaa24df)
 
 
-##  3. <a name='Downloadingthecode'></a>Downloading the code
+## Downloading the code
 
 To obtain the source code for RAG-bot, clone the RAG-bot repository:
 
@@ -48,7 +45,7 @@ You should now have a directory structure that looks as follows:
 
 ![tree_structure](https://i.imgur.com/mDVtsNS.png)
 
-##  4. <a name='Createavirtualenvironment'></a>Create a virtual environment
+## Create a virtual environment
 
 Make certain you are have Python version 3.9 or higher installed.  Create a virtual environment using:
 
@@ -67,7 +64,7 @@ Install the required packages using:
 pip install -r requirements.txt
 ```
 
-##  5. <a name='OpenAIKey'></a>OpenAI Key
+## OpenAI Key
 The RAG-bot code uses OpenAi for both two steps:
 * Text Embedding 
 * Text generation 
@@ -84,7 +81,7 @@ You can set this up by adding the following in your `~/.bashrc` file
 export OPENAI_API_KEY = 'your_openai_api_key_here'
 ```
 
-##  6. <a name='InitilalizingaWeaviateClouddatabase'></a>Initilalizing a Weaviate Cloud database
+## Initilalizing a Weaviate Cloud database
 
 You can used Weaviate Cloud Services (WCS) for free for 14 days by setting up a "sandbox".  To set up a sandbox you can follow the instructions [at this google doc here](https://docs.google.com/document/d/1dBIxpzXRiwKs4IXHVrBCd_iAFt6VF8qWQg9gTbM71aU/edit?usp=sharing).  
 
@@ -102,7 +99,7 @@ It may take a few minutes for the database to be created.  Once it is created yo
 
 ![weaviate_setup_gif](https://i.imgur.com/GArviG8.gif)
 
-##  7. <a name='Customizetheconfig.pyfile'></a>Customize the config.py file
+## Customize the config.py file
 
 The config.py file contains some of the variables that are used in the app.  You will need to set the following variables:
 
@@ -114,7 +111,7 @@ WEAVIATE_API_KEY = os.getenv('WEAVIATE_SANDBOX_API_KEY')
 # Weaviate Configuration
 WEAVIATE_URL = "your Weaviate URL to sandbox here"
 ```
-##  8. <a name='Getsampledatafrom.parquetfile'></a>Get sample data from .parquet file
+## Get sample data from .parquet file
 
 Once you have the config files set up with the API keys and your Weaviate sandbox URL, you can then upload the test data to get started.  
 
@@ -162,7 +159,7 @@ The output of `tenant_list` should be:
 
 We will use this list to create the separate `tenants` in the Weaviate database, with each tenant containing the vectors relevant to the text in each manual.  
 
-##  9. <a name='CreatingaWeaviateClientandClass'></a>Creating a Weaviate Client and Class
+## Creating a Weaviate Client and Class
 
 We will use some of the functions from the RAG-bot module
 
@@ -200,7 +197,7 @@ weav.get_schema(WEAVIATE_CLASS)
 ```
 this will output a json format with the schema
 
-##  10. <a name='CreateTenants'></a>Create Tenants
+## Create Tenants
 
 using the `tenant_list` created wen you read in the data, we will create the tenants in the `Manuals` database
 
@@ -214,7 +211,7 @@ To verify if these tenants were added you can write:
 ```python 
 weav.write_tenants(WEAVIATE_CLASS)
 ```
-##  11. <a name='UploaddatatoWeaviate'></a>Upload data to Weaviate
+## Upload data to Weaviate
 
 To upload data to Weaviate:
 ```python
@@ -224,7 +221,7 @@ for tenant in tenant_list:
     weav.add_pdf_data_objects(temp, 'New_manuals', tenant)
 ```
 
-##  12. <a name='QueryWeaviate'></a>Query Weaviate
+## Query Weaviate
 
 The Query to weaviate will do te following things:
 1. Get user prompt
@@ -248,7 +245,7 @@ retrieved_texts = weav.query_weaviate(prompt, k, weaviate_class, tenant_name)
 ```
 The retrieved texts should relate to the prompt, and should contain the metadata, including the page number and the score for the relevance of the retrieved information.  
 
-##  13. <a name='Nowyouhavedonethefollowing:'></a>Now you have done the following:
+## Now you have done the following
 
 * Set up you OpenAI API Key
 * Set up your Weaviate API Key
@@ -261,7 +258,7 @@ The retrieved texts should relate to the prompt, and should contain the metadata
 
 You are now prepared to run the Streamlit App!
 
-##  14. <a name='RunningStreamlit'></a>Running Streamlit
+## Running Streamlit
 
 You can run a local instance of the app in your browser from the RAG-bot directory using:
 ```bash
@@ -272,12 +269,12 @@ A link should become available, or you can follow the directions to copy/past th
 
 ---
 
-##  15. <a name='Howtouseyourowndata'></a>How to use your own data
+## How to use your own data
 
 To use your own data you would use the following call, including the path to your own PDF file, along with the chunk size.  
 
 ```python
-def plumb.pdf_to_df(pdf_path, chunk_size):
+your_data_df = plumb.pdf_to_df(pdf_path, chunk_size)
 ```
 
 This call does the following:
@@ -287,6 +284,11 @@ This call does the following:
 4. Returns this data in a dataframe ready for uploading to Weaviate.  
 
 All you would have to do after this is to creat the tenant in the database and use this tenant name in the upload.  
+
+## Acknowledgements
+
+* This project was built in collaboration with Aakash N S, CEO of the teaching platform, Jovian.com.  Without their support this project would not have been possible.
+
 
 
 
