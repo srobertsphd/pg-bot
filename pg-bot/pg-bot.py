@@ -70,7 +70,7 @@ if user_message is not None and user_message.strip() != "":
     with st.spinner('Retriving results ...'):
         try:
             vector = oai.vectorize_data_with_openai(user_message)
-            retrieved_texts = neon.get_top_k_similar_docs(vector, 10)
+            retrieved_texts = neon.get_top_k_similar_docs(vector, k)
             
             with st.chat_message("assistant"):
                 st.markdown(retrieved_texts)
