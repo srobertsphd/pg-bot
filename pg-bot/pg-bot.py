@@ -83,6 +83,8 @@ if user_message is not None and user_message.strip() != "":
             
             with st.chat_message("assistant"):
                 st.markdown(response)
+            with st.expander("Show Retrieved Texts"):
+                st.markdown(retrieved_texts)
         except Exception as e:
             st.write(f"Error: {e}")
 
