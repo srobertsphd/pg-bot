@@ -27,8 +27,7 @@ src_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src'))
 if src_path not in sys.path:
     sys.path.append(src_path)
 
-from config import DATABASE_URL, SQL_DB_BRANCH_URL
-
+from config import DATABASE_URL
 ########################################################################
 
 def connect_db():
@@ -37,12 +36,6 @@ def connect_db():
     register_vector(conn)
     return conn
 
-
-def connect_sql_branch_db():
-    """Connect to the PostgreSQL database and register the vector extension."""
-    conn = psycopg2.connect(SQL_DB_BRANCH_URL)
-    register_vector(conn)
-    return conn
 
 ########################################################################
 # Functions needed for creating and filling the table
@@ -55,107 +48,6 @@ def enable_pgvector_extension(cur):
     print("pgvector extension enabled")
 
 
-def create_labnetwork_table():
-    """Creates labnetwork table if it does not already exist """
-    with psycopg2.connect(DATABASE_URL) as conn:
-        register_vector(conn)
-        with conn.cursor() as cur:
-            enable_pgvector_extension(cur)
-
-            create_table_query = """
-            CREATE TABLE IF NOT EXISTS labnetwork (
-                id SERIAL PRIMARY KEY,
-                sender TEXT,
-                email TEXT,
-                domain TEXT,
-                date TIMESTAMP,
-                subject TEXT,
-                message_id TEXT,
-                thread_id TEXT,
-                cleaned_body TEXT,
-                uuid UUID,
-                embed VECTOR(1536)
-            );
-            """
-            cur.execute(create_table_query)
-            conn.commit()
-    print("Table created successfully.")
-
-
-def insert_data_to_db(df):
-    """Insert data from a DataFrame into the labnetwork table in PostgreSQL."""
-    # Define the SQL query for inserting data
-    insert_query = """
-    INSERT INTO labnetwork (
-        sender, email, domain, date, 
-        subject, message_id, thread_id, 
-        cleaned_body, uuid, embed
-    ) VALUES %s
-    """
-    # Convert the DataFrame to a list of tuples
-    data_tuples = [(
-        row['sender'], row['email'], row['domain'], row['date'], 
-        row['subject'], row['message_id'], row['thread_id'], 
-        row['cleaned_body'], row['uuid'], row['embed']
-    ) for index, row in df.iterrows()]
-    
-    # Use a context manager to handle the connection and cursor
-    with psycopg2.connect(DATABASE_URL) as conn:
-        register_vector(conn)
-        with conn.cursor() as cur:
-            execute_values(cur, insert_query, data_tuples)
-            conn.commit()
-    print("Data uploaded successfully.")
-
-
-def check_labnetwork_table_exists():
-    """Check if the labnetwork table exists in the database.
-    Returns:
-        Boolean -- True if exists, False if not
-    """
-    conn = connect_db()
-    with conn.cursor() as cur:
-        cur.execute("""
-            SELECT EXISTS (
-                SELECT FROM information_schema.tables 
-                WHERE table_schema = 'public' 
-                AND table_name = 'labnetwork'
-            );
-        """)
-        exists = cur.fetchone()[0]
-    return exists
-
-###############################################################################
-# Index the vectors in the labnetwork database
-# This may not be the best method, or lead to the fastest searching
-# could be updated in the future to be more efficient
-
-def get_number_of_records_in_table(cur):
-    """Get the number of records in the labnetwork table"""
-    cur.execute("SELECT COUNT(*) as cnt FROM labnetwork;")
-    num_records = cur.fetchone()[0]
-    return num_records
-
-def calculate_num_lists(num_records):
-    """Calculate the number of lists to be used for indexing with ivfflat"""
-    num_lists = num_records / 1000
-    if num_lists < 10:
-        num_lists = 10
-    if num_records > 1000000:
-        num_lists = math.sqrt(num_records)
-    return num_lists
-
-def index_labnetwork_data_with_ivfflat():
-    """Index the vectors in the labnetwork table using ivfflat"""
-    conn = connect_db()
-    cur = conn.cursor()
-    num_records = get_number_of_records_in_table(cur)
-    print("Number of vector records in table: ", num_records)
-    num_lists = calculate_num_lists(num_records)
-    print("Number of lists in table: ", num_lists)
-    cur.execute(f'CREATE INDEX ON labnetwork USING ivfflat (embed vector_cosine_ops) WITH (lists = {num_lists});')
-    print("The vectors in the table are now indexed")
-    conn.commit()
 
 ###############################################################################
 # This is used by the vector search nanobot Labnetwork page
@@ -172,12 +64,11 @@ def get_top_k_similar_docs(query_embedding, k):
     try:
         conn = connect_db()
         with conn.cursor() as cur:
-            # === Return everything in the table but the vectors ===
             query = """
-                SELECT sender, email, domain, date, subject,
-                        message_id, thread_id, cleaned_body
-                FROM labnetwork
-                ORDER BY embed <=> %s
+                SELECT chunk_id, parent_type, parent_content, 
+                       name_of_tool, content
+                FROM chunk_embeds
+                ORDER BY embedding <=> %s
                 LIMIT %s
             """
             # === Must convert vector to array for pgvector to work ===
@@ -190,52 +81,82 @@ def get_top_k_similar_docs(query_embedding, k):
         return get_top_k_similar_docs(query_embedding, k, conn)
 
 
-##############################################################################
-# Functions for Execututing SQL query 
-# These are used when calling queeries created by openai LLM
-# These are broken down so that a failure can throw an exception and be caught 
-# by the retry loop
+########################################################################
 
+def list_tables():
+    """List all tables in the database."""
+    try:
+        conn = connect_db()
+        with conn.cursor() as cur:
+            # Query to get all user tables (excluding system tables)
+            cur.execute("""
+                SELECT table_name 
+                FROM information_schema.tables 
+                WHERE table_schema = 'public'
+                ORDER BY table_name;
+            """)
+            tables = [table[0] for table in cur.fetchall()]
+            
+        conn.close()
+        return tables
+        
+    except Exception as e:
+        print(f"Error listing tables: {e}")
+        return []
+    
 
-
-def ask_database_using_sql(query):
-    """Function to query postgreSQL database with a provided SQL query.
+def list_columns(table_name):
+    """
+    List all columns in the specified table.
     
     Args:
-        query (str): a fully formed SQL query.
+        table_name (str): Name of the table to query
+        
     Returns:
-        list -- list of tuples returned by the query
-        (actually seems like a string formatted as a list of tuples)
+        list: List of column names in the table
     """
-    conn = connect_sql_branch_db()
-    cur = conn.cursor()
     try:
-        cur.execute(query)
-        results = str(cur.fetchall())
-        return results # this is a change
+        conn = connect_db()
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT column_name, data_type
+                FROM information_schema.columns
+                WHERE table_schema = 'public'
+                AND table_name = %s
+                ORDER BY ordinal_position;
+            """, (table_name,))
+            columns = [(col[0], col[1]) for col in cur.fetchall()]
+            
+        conn.close()
+        return columns
+        
     except Exception as e:
-        results = f"query failed with error: {e}"
-        raise e # this is a change 
-    # return results
-
-
-
-def execute_sql_query(tool_query_string):
-    try:
-        results = ask_database_using_sql(tool_query_string)
-        # print(f"executed sql query results: {results}")
-        return results
-    except Exception as e:
-        results = f"query failed with error: {e}"
-        print(results)
-        raise e  # Let the retry mechanism handle the exception
+        print(f"Error listing columns for table {table_name}: {e}")
+        return []
     
 
-def get_items_from_column(col_name, value):
-    query = f"""
-            SELECT * FROM labnetwork WHERE {col_name} = %s;
-        """
-    conn = connect_sql_branch_db()
-    cur = conn.cursor()
-    cur.execute(query, (value,))
-    return cur.fetchall()
+def get_tool_names():
+    """
+    Get all tool names from the tool_table.
+    
+    Returns:
+        list: List of tool names from the database
+    """
+    try:
+        conn = connect_db()
+        with conn.cursor() as cur:
+            query = """
+                SELECT tool_name 
+                FROM tool_table
+                ORDER BY tool_name;
+            """
+            cur.execute(query)
+            # Convert list of tuples to simple list
+            tool_names = [tool[0] for tool in cur.fetchall()]
+            
+        conn.close()
+        return tool_names
+        
+    except Exception as e:
+        print(f"Error getting tool names: {e}")
+        return []
