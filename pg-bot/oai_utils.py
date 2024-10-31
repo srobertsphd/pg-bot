@@ -23,29 +23,23 @@ def get_completion_from_messages(
     return response.choices[0].message.content
 
 
-def get_system_message_for_vector_retrievals(retrieved_data):
+def get_system_message_for_vector_retrievals(retrieved_texts):
     """Returns a system message with the retrieved data embedded
 
     Args:
-        retrieved_data: (list of dicts) of data retrieved from the labnetwork
-        user forum
+        retrieved_data: (markdown data with a single chunk separated by a line
+        retrieved for a nanofab tool manual
     Returns:
         system_message: (str) formatted string with the retrieved data included
     """
 
     system_message = f"""
-        You are an engineer with expertise in complex tools and also have
-        expert capabilities knowing how to run a nanofabrication facility.
-
-        You will receive a list of data retrieved from the labnetwork user forum, 
-        each element which will be formatted as a dictionary containing the ranking of
-        the data, the sender of the data, and the body of the text message itself.
-        lower ranks (numbers) are more relevant 
-
+        You are an engineer with expertise in complex tools.Y
+        ou will receive a text of data retrieved from a nanofab tool manual.
         Base your answers to the user prompt only on the retrieved data below:
         
-        #### Retrieved Labnetwork Data ####
-        {retrieved_data}
+        #### Retrieved tool manual data ####
+        {retrieved_texts}
 
         Formulate a response that best matches the user's query, 
         Give the response with as much relevant detail as possible
@@ -56,7 +50,7 @@ def get_system_message_for_vector_retrievals(retrieved_data):
         Do not answer questions that are not relevant to the data that is retrieved.
         If the retrieved texts do not contain any information to be able
         to answer the user query, you must reply that you do not have the 
-        necessary information, and that the user should ask a relevant labnetwork
+        necessary information, and that the user should ask a relevant tool related
         question.  
         
         """

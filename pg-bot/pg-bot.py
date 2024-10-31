@@ -49,11 +49,11 @@ for message in st.session_state.messages:
     if role and content:  # then it is not just initializing
         with st.chat_message(role):
             st.markdown(content)
-#             if (message.get("role") == "assistant" and 
-#                 "retrieved_texts" in message):
-#                 with st.expander("Show Retrieved Texts"):
-#                     st.markdown(message["retrieved_texts"], 
-#                                 unsafe_allow_html=True)
+            # if (message.get("role") == "assistant" and 
+            #     "formatted_text" in message):
+            #     with st.expander("Show Retrieved Texts"):
+            #         st.markdown(message["formatted_text"], 
+            #                     unsafe_allow_html=True)
 
 
 
@@ -70,10 +70,19 @@ if user_message is not None and user_message.strip() != "":
     with st.spinner('Retriving results ...'):
         try:
             vector = oai.vectorize_data_with_openai(user_message)
-            retrieved_texts = neon.get_top_k_similar_docs(vector, k)
+            retrieved_data = neon.get_top_k_similar_docs(vector, k)
+            retrieved_texts = st_utils.format_retrieved_chunks(retrieved_data)
+            
+            system_message = oai.get_system_message_for_vector_retrievals(retrieved_texts)
+            messages = [
+                {'role': 'system', 'content': system_message},
+                {'role': 'user', 'content': user_message}
+            ]
+            
+            response = oai.get_completion_from_messages(messages)
             
             with st.chat_message("assistant"):
-                st.markdown(retrieved_texts)
+                st.markdown(response)
         except Exception as e:
             st.write(f"Error: {e}")
 
