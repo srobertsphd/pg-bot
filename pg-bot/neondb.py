@@ -1,26 +1,22 @@
 # File: neondb.py
-# Author: Samantha Roberts
-# Created on: 6/10/2024
-# Last modified by: 
+# code guru: sam-i-am
+# Created on: 10/30/2024
+# Last modified by: sam-i-am
 # Last modified on: 
 #
 # Description:
 # ------------------------------------------------------------
 # This module provides functionalities for interacting with a PostgreSQL database.
-# It includes functions to connect to the database, create and manage tables,
-# insert and retrieve data, and perform vector-based searches using the pgvector
+# It includes functions to perform vector-based searches using the pgvector
 # extension. This module is used primarily for operations related to the
-# 'labnetwork' table, which stores various pieces of information and embeddings
-# for the MIT Labnetwork email forum
+# manuals project which stores chunks and data regarding nanofab tool manuals
 
 
 import os
 import sys
 import psycopg2
 from pgvector.psycopg2 import register_vector
-from psycopg2.extras import execute_values
 import numpy as np
-import math
 
 # Ensure the src directory is in the Python path to import the config module
 src_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src'))
